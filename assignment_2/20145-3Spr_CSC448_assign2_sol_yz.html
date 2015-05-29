@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+	<title>CSC 448: Compiler Design: 2015 Spring, Assignment #2</title>
+	<meta charset="UTF-8">
+	<style>
+	h2 { text-align: center;}
+	</style>
+</head>
+
+<body>
+	<h2>CSC 448: Compiler Design: 2015 Spring, Assignment #2</h2>
+	<p>
+		Last modified 2015 April 24
+	</p>
+	<p>
+		Student: Yuancheng Zhang
+	</p>
+
+	<h4>Purpose:</h4>
+	<p>
+		To go over the Unix utility <code>flex</code>, and some of the theory of grammars.
+	</p>
+
+
+	<h4>Computing:</h4>
+	<p>
+		Please <a href="">ssh</a> into ctilinux1.cstcis.cti.depaul.edu, or use your own Unix machine.
+	</p>
+
+	<h4>Assignment:</h4>
+	<ol type="1">
+		<li>
+			<strong>An introduction to the lexemes of StructProc (50 points)</strong>
+			<p>
+				<font color="blue">Please see the attachment.</font>
+			</p>
+		</li>
+
+		<li>
+			<strong>Questions from the book, chapter 4, pages 139-140 (50 points)</strong><br/>
+			<ol type="a">
+				<li>Question 5. Describe the language denoted by each of the following grammars:
+				</li>
+				<ol>
+					<li><b>({ A, B, C }, { a, b, c },∅, A)<br></b>
+						<font color="blue">
+							{ A, B, C } are nonterminals;<br>
+							{ a, b, c } are terminals;<br>
+							A is the start symbol;<br>
+							∅ means <b>NO</b> production here;<br>
+							<b>
+								therefore, nothing will be parsed by this grammar.
+							</b>
+						</font>
+					</li>
+					<li><b>({ A, B, C }, { a, b, c }, { A→B C }, A)<br></b>
+						<font color="blue">
+							{ A, B, C } are nonterminals;<br>
+							{ a, b, c } are terminals;<br>
+							A is the start symbol;<br>
+							{ A→B C } is production;<br>
+							<b>
+								there is no terminal in the { A→B C } production, so it will be a infinite loop by this grammar.
+							</b>
+						</font>
+					</li>
+					<li><b>({ A, B, C }, { a, b, c }, { A→A a, A→b }, A)<br></b>
+						<font color="blue">
+							{ A, B, C } is nonterminals;<br>
+							{ a, b, c } is terminals;<br>
+							A is the start symbol;<br>
+							{ A→A a, A→b } are productions;<br>
+							<b>
+								there are {a, b} but no {c} in the productions, so it will be parsed as a string beginning with at least one &#39;b&#39; and ending with only one &#39;a&#39; by this grammar.<br>
+								e.g. &#34;bbbbbbbbbbbbba&#34;, &#34;bbba&#34;, &#34;ba&#34;
+							</b>
+						</font>
+					</li>
+					<li><b>({ A, B, C }, { a, b, c }, { A→B B, B→a, B→b, B→c }, A)<br></b>
+						<font color="blue">
+							{ A, B, C } is nonterminals;<br>
+							{ a, b, c } is terminals;<br>
+							A is the start symbol;<br>
+							{ A→B B, B→a, B→b, B→c } are productions;<br>
+							there are two letters in the result by this grammar.<br>
+							<b>
+								They are &#34;aa&#34;, &#34;ab&#34;, &#34;ac&#34;, &#34;ba&#34;, &#34;bb&#34;, &#34;bc&#34;, &#34;ca&#34;, &#34;cb&#34;, &#34;cc&#34;.
+							</b>
+						</font>
+					</li>
+				</ol>
+				<li>Question 6. What are the difficulties associated with constructing a grammar whose generated strings are decimal representations of irrational numbers?<br>
+					<font color="blue">
+						Irrational numbers cannot be represented as terminating or repeating decimals.<br>
+						We need to consider how long the lengh of irrational numbers will be displayed. 
+					</font>
+				</li>
+				<li>Question 7. A grammar for infix expressions follows:<br>
+					<code>
+						1 Start → E $<br>
+						2 ... E → T plus E<br>
+						3 ..... | T<br>
+						4 ... T → T times F<br>
+						5 ..... | F<br>
+						6 ... F → ( E )<br>
+						7 ..... | num<br>
+					</code>
+					(a) Show the <b>leftmost</b> derivation of the following string.<br>
+					<code>num plus num times num plus num $</code><br>
+					<font color="blue">
+						<code>
+							01 Start ⇒ E $<br>
+							02 ..... ⇒ T plus E $<br>
+							03 ..... ⇒ F plus E $<br>
+							04 ..... ⇒ num plus E $<br>
+							05 ..... ⇒ num plus T plus E $<br>
+							06 ..... ⇒ num plus T times F plus E $<br>
+							07 ..... ⇒ num plus F times F plus E $<br>
+							08 ..... ⇒ num plus num times F plus E $<br>
+							09 ..... ⇒ num plus num times num plus E $<br>
+							10 ..... ⇒ num plus num times num plus T $<br>
+							11 ..... ⇒ num plus num times num plus F $<br>
+							12 ..... ⇒ num plus num times num plus num $<br>
+						</code>
+					</font>
+					(b) Show the <b>rightmost</b> derivation of the following string.<br>
+					<code>num times num plus num times num $</code><br>
+					<font color="blue">
+						<code>
+							01 Start ⇒ E $<br>
+							02 ..... ⇒ T plus E $<br>
+							03 ..... ⇒ T plus T $<br>
+							04 ..... ⇒ T plus T times F $<br>
+							05 ..... ⇒ T plus T times num $<br>						06 ..... ⇒ T plus F times num $<br>						07 ..... ⇒ T plus num times num $<br>
+							08 ..... ⇒ T times F plus num times num $<br>
+							09 ..... ⇒ T times num plus num times num $<br>
+							10 ..... ⇒ F times num plus num times num $<br>
+							11 ..... ⇒ num times num plus num times num $<br>
+						</code>
+					</font>
+					(c) Describe how this grammar structures expressions, in terms of the precedence and left- or right- associativity of operators.<br>
+					<font color="blue">
+						In leftmost dervivation, <br>
+						if {E → T plus E}, E is always expanded T first and then E;<br>
+						if {T → T times F}, T is always expanded T first and then F.<br>
+						In rightmost dervivation, <br>
+						if {E → T plus E}, E is always expanded E first and then T;<br>
+						if {T → T times F}, T is always expanded F first and then T.<br>
+						In the above two cases, the results is same by no matter left- or right- derivation. But it will be ambiguous in leftmost or rightmost if there is a serial of same operators(plus/times), such as &#34;num times num times num&#34; or &#34;num plus num plus num&#34;.
+					</font>
+				</li>
+				<li>Question 8. Consider the following two grammars.<br>
+					(a)<br>
+					<code>
+						1 Start → E $<br>
+						2 ....E → ( E plus E<br>
+						3 ..... | num<br>
+					</code>
+					(b)<br>
+					<code>
+						1 Start → E $<br>
+						2 ... E → E ( plus E<br>
+						3 ..... | num<br>
+					</code>
+					Which of these grammars, if any, is ambiguous? Prove your answer by showing two distinct derivations of some input string for the ambiguous grammar(s).<br>
+					<font color="blue">
+						The <b>b</b> is ambiguous.<br>
+						e.g. there are the two parse trees for <br>
+						<code>num ( plus num ( plus num</code>.<br>
+						LM: <font color="orange">&#34;+&#34; means <code>plus</code>.</font><br>
+						<code>
+							... ... E.. ...<br>
+							... ../ |.. \..<br>
+							... E.. ( + E..<br>
+							../ |.. \.. |..<br>
+							E.. ( + E.. num<br>
+							|..	... |.. ...<br>
+							num ... num ...<br>
+						</code>
+						RM: <font color="orange">&#34;+&#34; means <code>plus</code>.</font><br>
+						<code>
+							... E.. ... ...<br>
+							../ |.. \.. ...<br>
+							E.. ( + E.. ...<br>
+							|.. ../ |.. \..<br>
+							num E.. ( + E..<br>
+							... |..	... |..<br>
+							... num ... num<br>
+						</code>
+					</font>
+				</li>
+				<li>Question 9. Compute First and Follow sets for the nonterminals of the following grammar. (<code>First</code> set only)<br>
+					<code>
+						1 S → aSe<br>
+						2 . | B<br>
+						3 B → bBe<br>
+						4 . | C<br>
+						5 C → cCe<br>
+						6 . | d<br>
+					</code>
+					<font color="blue">
+						<code>
+							Lv | First | ans... | Done? | Comment<br>
+							.. | X β . | ...... | ..... | <br>
+							------------- First(C) -------------<br>
+							.0 | C ⊥ . | { }... | No... | <br> 
+							.1 | c Ce. | {c}... | No... | C → cCe<br>
+							.2 | C e . | {c}... | No... | <br>
+							.3 | d ⊥ . | {cd}... | Yes.. | C → d<br>
+							.2 | e ⊥ . | {cde}. | Yes.. | <br>
+							.1 | ..... | {cde}. | Yes.. | <br>
+							.0 | ..... | {cde}. | Yes.. | <br>
+							------------- First(B) -------------<br>
+							.0 | B ⊥ . | { }... | No... | <br> 
+							.1 | b Be. | {b}... | No... | B → bBe<br>
+							.2 | B e . | {bcde}.| No.. | Because C → cde<br>
+							.3 | e ⊥ . |{bcdee} | Yes.. | <br>
+							.2 | ..... |{bcdee} | Yes.. | <br>
+							.1 | ..... |{bcdee} | Yes.. | <br>
+							.0 | ..... |{bcdee} | Yes.. | <br>
+							--------------- First(S) --------------<br>
+							.0 | S ⊥ . | { }... | No... | <br> 
+							.1 | a Se. | {a}... | No... | S → aSe<br>
+							.2 | S e . |{abcdee} | No.. | Because C → cde<br>
+							.3 | e ⊥ . |{abcdeee}| Yes.. | <br>
+							.2 | ..... |{abcdeee}| Yes.. | <br>
+							.1 | ..... |{abcdeee}| Yes.. | <br>
+							.0 | ..... |{abcdeee}| Yes.. | <br>
+						</code>
+					</font>
+				</li>
+			</ol>
+		</li>
+	</ol>
+</body>
+</html>

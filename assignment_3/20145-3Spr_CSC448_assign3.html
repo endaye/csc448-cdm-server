@@ -1,0 +1,220 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+ 
+   
+   
+   
+ 
+
+ 
+   <h2>CSC 448: Compiler Design: 2015 Spring, Assignment #3</h2>
+   <p>
+     Last modified 2015 May 15
+   </p>
+
+   <h4>Purpose:</h4>
+   <p>
+     To go over theory the theory of LL(1) and LR(1) parsing.
+   </p>
+
+
+   <h4>Computing:</h4>
+   <p>
+     Please <a href="">ssh</a> into ctilinux1.cstcis.cti.depaul.edu, or use your own Unix machine.
+   </p>
+
+   <h4>Assignment:</h4>
+   <ol type="1">
+     <li>
+       <strong>Improving <code>llParserMaker.cpp</code> (40 points)</strong>
+       <p>
+	 Please give <code>llParserMaker.cpp</code> the ability to handle common prefixes.
+	 Do this by finishing <code>class Grammar</code>&#39;s method <code>factorCommonPrefixes()</code>.
+	 Look for my comment:
+<pre>
+      //  YOUR CODE HERE!
+      //  The outer loop is their foreach A in NonTerminal loop.
+      //  &#39;nonTermPtr&#39; points to the current &#39;NonTerminal&#39; instance
+</pre>
+	 An algorithm for doing so is the <code>Factor()</code> procedure in Figure 5.13 on page 156 of <em>Crafting a Compiler</em> by Fischer, Cytron and LeBlanc.
+       </p>
+
+       <p>
+	 The following methods will be useful:
+	 <ul>
+	   <li>
+	     <code>std::vector&lt;Symbol*&gt; longestCommonPrefix(const NonTerminal* nonTermPtr)</code> of class <code>Grammar</code>.
+	     <p>
+	       Computes and returns the longest common prefix of right-hand-side symbols held in common by two or more Production instances for NonTerminal instance &#39;*nonTermPtr&#39;.
+	       Prefix returned as std::vector&lt;Symbol*&gt;.  Returns empty vector if no such common vector exists.
+	     </p>
+	   </li>
+	   <li>
+	     <code>Symbol* newNonTerminal()</code> of <code>class Grammar</code>:
+	     <p>
+	       Generates a new, unique <code>NonTerminal</code> object, and returns a pointer to it.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>uInt	getNumProductions ()</code> of class <code>Grammar</code>
+	     <p>
+	       Returns the number of Production instances in &#39;*this&#39; Grammar.
+	       No parameters.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>Production* getProductionPtr (uInt i)</code> of class <code>Grammar</code>
+	     <p>
+	       Returns a pointer to the &#39;i&#39;-th Production instance.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>bool doesRHSBeginWith (const std::vector&lt;Symbol*&gt;&amp; symbolList)</code> of class <code>Production</code>
+	     <p>
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>void addProduction(Production *prodPtr)</code> of <code>class Grammar</code>:
+	     <p>
+	       Adds new production pointed to by <code>prodPtr</code> to the Grammar.
+	     </p>
+	   </li>
+	   <li>
+	     <code>void removeProduction(Production *prodPtr)</code> of <code>class Grammar</code>
+	     <p>
+	       Removes existing production pointed to by <code>prodPtr</code> from the Grammar.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>Production (NonTerminal* newLhsPtr, const std::vector&lt;Symbol*&gt;&amp; newRhs);</code>
+	     <p>
+	       The <code>Production</code> constructor.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>unsigned int size()</code> of class <code>std::vector</code>
+	     <p>
+	       Returns the number of items in the vector.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>void push_back(item)</code> of class <code>std::vector</code>
+	     <p>
+	       Puts <code>item</code> at the end of the vector.
+	       If the vector is of type <code>vector&lt;Symbol*&gt;</code>, then <code>item</code> must be of type <code>Symbol*</code>.
+	       If the vector is of type <code>vector&lt;Production*&gt;</code>, then <code>item</code> must be of type <code>Production*</code>.
+	     </p>
+	   </li>
+
+	   <li>
+	     <code>Type operator[index]</code> of class <code>std::vector</code>
+	     <p>
+	       Returns the <code>index</code> item in the vector (just like accessing an array).
+	     </p>
+	   </li>
+
+	 </ul>
+       </p>
+
+       <p>
+	 <h5>Hints:</h5>
+	 <ol type="a">
+	   <li>
+	     <p>
+	       One <em>important difference</em> between my C++ implementation and their pseudo-code is that I use <code>vector</code> (which has ordering) to store pointers to <code>Production</code> instead sets, like they do.
+	       Therefore, if you remove Productions inside their <code>foreach Production</code> loop, you will renumber Productions, and mess yourself up.
+	     </p>
+
+	     <p>
+	       Therefore, instead of removing productions inside their <code>foreach Production</code> loop, I recommend:
+	       <ol type="1">
+		 <li>
+		   Declaring a variable like this before the <code>foreach Production</code> loop:
+<pre>
+std::vector&lt;Production*&gt;	toRemove;
+</pre>
+
+		 </li>
+		 <li>
+		   Inside the <code>foreach Production</code> loop put pointers productions you want to remove into <code>toRemove</code>:
+<pre>
+toRemove.push_back(prodPtr);
+</pre>
+		 </li>
+		 <li>
+		   Using a <code>for</code> loop after <code>foreach Production</code> loop that goes from <code>0</code> to <code>toRemove.size()-1</code> that does <code>removeProduction()</code> on all the members of <code>toRemove</code>.
+<pre>
+for  (uInt pi = 0;  pi &lt; toRemove.size();  pi++)
+  removeProduction(toRemove[pi]);
+</pre>
+		 </li>
+	       </ol>
+	     </p>
+	   </li>
+
+	   <li>
+	     What is <code>std::vector</code>?<br/>
+	     It is the same thing as Java&#39;s <code>ArrayList</code>
+	   </li>
+	   <p></p>
+
+	   <li>
+	     Remember, this is C++.
+	     If you have a <em>pointer</em> <code>ptr</code> to an object, and want to run method <code>method()</code> on it, you have to say either <code>ptr-&gt;method()</code> or <code>(*ptr).method()</code>.
+	   </li>
+	   <p></p>
+	   <li>
+	     Test it with the grammar:
+	     <p>
+	       <code>
+		 {if,then,else,endif,var,+},{S,Stmt,Expr},S,{S - Stmt, Stmt - if Expr then Stmt endif, Stmt - if Expr then Stmt else Stmt endif, Stmt - Expr, Expr - var + Expr, Expr - var}
+	       </code>
+	     </p>
+	     <p>
+	       You may use input strings:
+	       <ul>
+		 <li><code>if var then var + var endif</code></li>
+		 <li><code>if var + var then var else var + var endif</code></li>
+		 <li><code>if var + var then var else if var + var then var else var endif endif</code></li>
+		 <li><code>if var + var then if var then var else var endif else if var + var then var else var endif endif</code></li>
+	       </ul>
+	     </p>
+	   </li>
+	 </ol>
+       </p>
+     </li>
+     <p></p>
+
+     <li>
+       <strong>Questions from the book, chapter 5, pages 173-178 (30 points)</strong><br/>
+       <ol type="a">
+	 <li>Question 9</li>
+	 <li>Question 10</li>
+	 <li>Question 11</li>
+       </ol>
+     </li>
+     <p></p>
+
+     <li>
+       <strong>Questions from the book, chapter 6, pages 224-233 (30 points)</strong><br/>
+       <ol type="a">
+	 <li>Question 12</li>
+	 <li>Question 13</li>
+	 <li>Question 40</li>
+       </ol>
+     </li>
+     <p></p>
+
+
+   </ol>
+ 
+
+
+<script type="text/javascript" src="/d2l/common/math/MathML.js?v=10.3.0.2146-123 "></script><script type="text/javascript">D2LMathML.DesktopInit('/d2l/common/mathjax/2.1/MathJax.js?config=MML_HTMLorMML','/d2l/common/mathjax/2.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML');</script></body></html>

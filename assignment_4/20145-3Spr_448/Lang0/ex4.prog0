@@ -1,0 +1,12 @@
+{
+  while  (i < 10)
+  {
+    if  (i < 5)
+      crazySum = (i + crazySum) * i;
+    else
+      crazySum = (2 * i) + crazySum;
+    i = i + 1;
+  }
+
+  print crazySum;
+}

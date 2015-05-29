@@ -1,0 +1,26 @@
+CSC 448: Compiler Design: 2015 Spring, Assignment #3
+Last modified 2015 May 15
+Student: Yuancheng Zhang
+Purpose:
+To go over theory the theory of LL(1) and LR(1) parsing.
+Computing:
+Please ssh into ctilinux1.cstcis.cti.depaul.edu, or use your own Unix machine.
+Assignment:
+
+1.	Improving llParserMaker.cpp (40 points)
+(Empty)
+
+2.	Questions from the book, chapter 5, pages 173-178 (30 points)
+
+Question 9. Recall that an LL(k) grammar allows k tokens of lookahead. Construct an LL(2) parser for the following grammar:
+	1   Stmt → id ;
+	2        | id(IdList);
+	3 IdList → id
+	4        | id,IdList
+Answer 9:
+	First
+	
+Question 10. Show the two distinct parse trees that can be constructed for
+	if expr then if expr then other else other
+using the grammar given in Figure 5.17. For each parse tree, explain the correspondence of then and else.
+Answer 10.

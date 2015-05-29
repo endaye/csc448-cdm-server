@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+	<title>CSC 448: Compiler Design: 2015 Spring, Assignment #2</title>
+	<meta charset="UTF-8">
+	<style>
+	h2 { text-align: center;}
+	</style>
+</head>
+
+<body>
+	<h2>CSC 448: Compiler Design: 2015 Spring, Assignment #2</h2>
+	<p>
+		Last modified 2015 April 24
+	</p>
+
+	<h4>Purpose:</h4>
+	<p>
+		To go over the Unix utility <code>flex</code>, and some of the theory of grammars.
+	</p>
+
+
+	<h4>Computing:</h4>
+	<p>
+		Please <a href="">ssh</a> into ctilinux1.cstcis.cti.depaul.edu, or use your own Unix machine.
+	</p>
+
+	<h4>Assignment:</h4>
+	<ol type="1">
+		<li>
+			<strong>An introduction to the lexemes of StructProc (50 points)</strong>
+			<p>
+				Throughout this course I hope to gradually introduce you to <code>StructProc</code>, a computer language I am creating for scientific knowledge representation.
+				This first introduction is to a subset of its <em>lexemes</em> (the legal strings that will compose its tokens) and will ask you to write a <code>lex</code> program to recognize the following lexemes:
+			</p>
+
+			<table>
+				<tr>
+					<th>Pattern</th>
+					<th>Name</th>
+					<th>Optional comments</th>
+				</tr>
+				<tr>
+					<td>space, tab, newline</td>
+					<td>ignore (no output)</td>
+				</tr>
+				<tr>
+					<td>,</td>
+					<td>COMMA</td>
+				</tr>
+				<tr>
+					<td>;</td>
+					<td>SEMICOLON</td>
+				</tr>
+				<tr>
+					<td>~</td>
+					<td>SIDE</td>
+				</tr>
+				<tr>
+					<td>[a-zA-Z_][a-zA-Z0-9_]<sup>*</sup></td>
+					<td>IDENTIFIER</td>
+				</tr>
+				<tr>
+					<td>@ [a-zA-Z0-9_]<sup>*</sup></td>
+					<td>VARIABLE</td>
+				</tr>
+				<tr>
+					<td>\? [a-zA-Z0-9]<sup>*</sup></td>
+					<td>PREDICATE</td>
+				</tr>
+				<tr>
+					<td>C-style string constants (allowing for \&quot;)</td>
+					<td>CONSTANT</td>
+				</tr>
+				<tr>
+					<td>` [.]<sup>*</sup> `</td>
+					<td>CONSTANT</td>
+					<td>(The backtick, or Grave accent)
+					</tr>
+					<tr>
+						<td>(</td>
+						<td>BEGIN_PAREN</td>
+					</tr>
+					<tr>
+						<td>)</td>
+						<td>END_PAREN</td>
+					</tr>
+					<tr>
+						<td>(*</td>
+						<td>BEGIN_VALUE</td>
+					</tr>
+					<tr>
+						<td>*)</td>
+						<td>END_VALUE</td>
+					</tr>
+					<tr>
+						<td>[</td>
+						<td>BEGIN_LIST</td>
+					</tr>
+					<tr>
+						<td>]</td>
+						<td>END_LIST</td>
+					</tr>
+					<tr>
+						<td>[*</td>
+						<td>BEGIN_IMPLICIT</td>
+					</tr>
+					<tr>
+						<td>*]</td>
+						<td>END_IMPLICIT</td>
+					</tr>
+					<tr>
+						<td>[**</td>
+						<td>BEGIN_NODE_LIST</td>
+					</tr>
+					<tr>
+						<td>**]</td>
+						<td>END_NODE_LIST</td>
+					</tr>
+					<tr>
+						<td>{</td>
+						<td>BEGIN_BAG</td>
+					</tr>
+					<tr>
+						<td>}</td>
+						<td>END_BAG</td>
+					</tr>
+					<tr>
+						<td>{*</td>
+						<td>BEGIN_EXPLICIT</td>
+					</tr>
+					<tr>
+						<td>*}</td>
+						<td>END_EXPLICIT</td>
+					</tr>
+					<tr>
+						<td>&quot;+&quot; [a-zA-Z_]<sup>*</sup></td>
+						<td>ADD</td>
+					</tr>
+					<tr>
+						<td>&quot;-&quot; [a-zA-Z_]<sup>*</sup></td>
+						<td>ADD</td>
+					</tr>
+					<tr>
+						<td>
+							Either of the following:
+							<ul>
+								<li>*</li>
+								<li>/</li>
+							</ul>
+						</td>
+						<td>MULTIPLY</td>
+					</tr>
+					<tr>
+						<td>**</td>
+						<td>POWER</td>
+					</tr>
+					<tr>
+						<td>Any ADD, MULTIPLY or POWER lexeme when preceded by single quote (')</td>
+						<td>IDENTIFIER</td>
+					</tr>
+					<tr>
+						<td>Optional +/-, followed by [0-9]<sup>+</sup></td>
+						<td>CONSTANT</td>
+					</tr>
+					<tr>
+						<td>Optional +/-, followed by [0-9]<sup>+</sup> \ [0-9]<sup>+</sup></td>
+						<td>CONSTANT</td>
+						<td>Signifies rational constant</td>
+					</tr>
+					<tr>
+						<td>Common floating point formats</td>
+						<td>CONSTANT</td>
+					</tr>
+					<tr>
+						<td>:=</td>
+						<td>ASSIGN</td>
+					</tr>
+					<tr>
+						<td>:-</td>
+						<td>IS_IMPLIED_BY</td>
+					</tr>
+					<tr>
+						<td>^</td>
+						<td>CARET</td>
+					</tr>
+					<tr>
+						<td>^^</td>
+						<td>DOUBLE_CARET</td>
+					</tr>
+					<tr>
+						<td>-&gt;</td>
+						<td>ARROW</td>
+					</tr>
+					<tr>
+						<td>&amp;&amp;</td>
+						<td>AND</td>
+					</tr>
+					<tr>
+						<td>||</td>
+						<td>OR</td>
+					</tr>
+					<tr>
+						<td>|</td>
+						<td>VERTICAL_BAR</td>
+					</tr>
+					<tr>
+						<td>!</td>
+						<td>UNARY</td>
+					</tr>
+					<tr>
+						<td>
+							Any of the following:
+							<ul>
+								<li>!=ref</li>
+								<li>=ref</li>
+								<li>!=num</li>
+								<li>=num</li>
+								<li>==</li>
+								<li>!=</li>
+							</ul>
+						</td>
+						<td>EQUALITY_COMPARE</td>
+					</tr>
+					<tr>
+						<td>Any of the following:
+							<ul>
+								<li>&gt;</li>
+								<li>&gt;=</li>
+								<li>&lt;</li>
+								<li>&lt;=</li>
+								<li>&gt;&gt;</li>
+								<li>&lt;&lt;</li>
+							</ul>
+						</td>
+						<td>LESSER_GREATER_COMPARE</td>
+					</tr>
+					<tr>
+						<td>/? until ?/</td>
+						<td>(a comment, no output)</td>
+					</tr>
+					<tr>
+						<td>// until end-of-line</td>
+						<td>(a comment, no output)</td>
+					</tr>
+					<tr>
+						<td>sub</td>
+						<td>SUB</td>
+					</tr>
+					<tr>
+						<td>final</td>
+						<td>FINAL</td>
+					</tr>
+					<tr>
+						<td>single</td>
+						<td>SINGLE</td>
+					</tr>
+					<tr>
+						<td>noMore</td>
+						<td>NOMORE</td>
+					</tr>
+					<tr>
+						<td>AnonFncTpl</td>
+						<td>LAMBDATEMPLATES</td>
+					</tr>
+					<tr>
+						<td>not</td>
+						<td>NOT</td>
+					</tr>
+					<tr>
+						<td>-unc</td>
+						<td>UNSPECIFIC_UNCAT</td>
+					</tr>
+					<tr>
+						<td>-uncA</td>
+						<td>UNCAT</td>
+					</tr>
+					<tr>
+						<td>-uncZ</td>
+						<td>UNCAT</td>
+					</tr>
+					<tr>
+						<td>+con</td>
+						<td>CONCAT</td>
+					</tr>
+					<tr>
+						<td>
+							Any of the following:
+							<ul>
+								<li>e</li>
+								<li>pi</li>
+								<li>+infinity</li>
+								<li>-infinity</li>
+							</ul>
+						</td>
+						<td>NAMED_CONSTANT</td>
+					</tr>
+					<tr>
+						<td>
+							Any of the following:
+							<ul>
+								<li>sin</li>
+								<li>cos</li>
+								<li>tan</li>
+								<li>asin</li>
+								<li>acos</li>
+								<li>atan</li>
+								<li>+ (only when followed by a begin parenthesis, which is not part of the lexeme)</li>
+								<li>- (only when followed by a begin parenthesis, which is not part of the lexeme)</li>
+							</ul>
+						</td>
+						<td>NAMED_CONSTANT</td>
+					</tr>
+				</table>
+				<p/>
+				<p>
+					Please read the file <code>libs.som8</code> and generate an output file that is the names of the lexemes that are present.
+					The list of lexeme names that you should generate is in <code>libs.lexemes.txt</code>.
+					Use the Unix tool <code>diff</code> to compare your output with the &quot;correct&quot; output in <code>libs.lexemes.txt</code>:
+					<pre>
+						$ myProgram &gt; myOutput.txt
+						$ diff myOutput.txt libs.lexemes.txt
+					</pre>
+					If <code>diff</code> has <em>no</em> output then the two files are equivalent.
+				</p>
+			</li>
+
+
+			<li>
+				<strong>Questions from the book, chapter 4, pages 139-140 (50 points)</strong><br/>
+				<ol type="a">
+					<li>Question 5. Describe the language denoted by each of the following grammars:
+					</li>
+					<ol>
+						<li>({ A, B, C }, { a, b, c },∅, A)</li>
+						<li>({ A, B, C }, { a, b, c }, { A→B C }, A)</li>
+						<li>({ A, B, C }, { a, b, c }, { A→A a, A→b }, A)</li>
+						<li>({ A, B, C }, { a, b, c }, { A→B B, B→a, B→b, B→c }, A)</li>
+					</ol>
+					<li>Question 6. What are the difficulties associated with constructing a grammar whose generated strings are decimal representations of irrational numbers?
+					</li>
+					<li>Question 7. A grammar for infix expressions follows:<br>
+						1 Start→E $<br>
+						2 E→T plus E<br>
+						3 | T<br>
+						4 T→T times F<br>
+						5 | F<br>
+						6 F→( E )<br>
+						7 | num<br>
+						(a) Show the leftmost derivation of the following string.<br>
+						num plus num times num plus num $<br>
+						(b) Show the rightmost derivation of the following string.<br>
+						num times num plus num times num $<br>
+						(c) Describe how this grammar structures expressions, in terms of the
+						precedence and left- or right- associativity of operators.
+					</li>
+					<li>Question 8. Consider the following two grammars.<br>
+						(a)<br>
+						1 Start→E $<br>
+						2 E→( E plus E<br>
+						3 | num<br>
+						(b)<br>
+						1 Start→E $<br>
+						2 E→E ( plus E<br>
+						3 | num<br>
+						Which of these grammars, if any, is ambiguous? Prove your answer by
+						showing two distinct derivations of some input string for the ambiguous
+						grammar(s).
+					</li>
+					<li>Question 9. Compute First and Follow sets for the nonterminals of the following(<code>First</code> set only)<br>
+						grammar.<br>
+						1 S→aSe<br>
+						2 | B<br>
+						3 B→bBe<br>
+						4 | C<br>
+						5 C→cCe<br>
+						6 | d<br>
+					</li>
+				</ol>
+
+			</ol>
+		</body>
+
+		</html>

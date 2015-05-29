@@ -1,0 +1,1121 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html><head></head><body>
+
+ 
+   
+   
+   
+ 
+
+ 
+   <h2>CSC 448: Compiler Design: 2015 Spring, Assignment #4</h2>
+   <p>
+     Last modified 2015 May 22
+   </p>
+
+   <h4>Purpose:</h4>
+   <p>
+     To go over:
+     <ul>
+       <li>Lex (well, flex)</li>
+       <li>Yacc (well, Bison)</li>
+       <li>Symbol tables for compilers (well, interpreters)</li>
+     </ul>
+   </p>
+
+
+   <h4>Computing:</h4>
+   <p>
+     Please <a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html">ssh</a> into ctilinux1.cstcis.cti.depaul.edu, ctilinux2.cstcis.cti.depaul.edu, or use your own Unix machine.
+   </p>
+
+   <h4>Assignment:</h4>
+   <p>
+     In this assignment please revise the tokenizer and grammar of our &quot;lang0&quot; so that our interpreted language can:
+     <ul>
+       <li>Explicitly declare variables</li>
+       <li>Use a symbol table that allows different variables with the same name to exist in different scopes</li>
+       <li>Read and print string constants</li>
+       <li>Distinguish between prints that do and do not add a newline at their ends</li>
+       <li>Handle C++ style (//) comments</li>
+     </ul>
+   </p>
+
+   <ol type="1">
+     <li><h5>Obtaining the files:</h5>
+       <p>
+	 Please download the following files from the .zip file for week 8:
+	 <ul>
+	   <li><code>lang0.lex</code> (please rename it to <code>lang2.lex</code>)</li>
+	   <li><code>lang0.y</code> (please rename it to <code>lang2.y</code>)</li>
+	 </ul>
+	 Please change their inclusions:
+	 <ul>
+	   <li><code>&quot;lang0.h&quot;</code> to <code>&quot;lang2.h&quot;</code></li>
+	   <li><code>&quot;lang0.tab.h&quot;</code> to <code>&quot;lang2.tab.h&quot;</code></li>
+	 </ul>
+       </p>
+
+       <p>
+	 Please obtain the following files from the bottom of this assignment:
+	 <ul>
+	   <li><code>Makefile</code></li>
+	   <li><code>lang2.h</code></li>
+	   <li><code>SymbolTable.h</code></li>
+	   <li><code>Statement.h</code> (I have slightly changed the classes for Print, Assign, Read and RValVar)</li>
+	   <li>the good and bad programs</li>
+	 </ul>
+       </p>
+
+     </li><li><h5>Grammar symbols:</h5>
+       Please add the following <code>token</code>s:
+       <ul>
+	 <li><code>PRINTLN</code></li>
+	 <li><code>DECLARE</code></li>
+	 <li><code>STRING</code>, which should use member variable <code>charPtr_</code>.</li>
+       </ul>
+     </li>
+     <p></p>
+
+     <li><h5>Tokenizer rules:</h5>
+       Please add rules, or revise rules to:
+       <ol type="a">
+	 <li>Ignore C++ style comments (// to end of line)</li>
+	 <li>
+	   Handle string constants.
+	   Text between double quotes (&quot;) should be copied by <code>strdup()</code> to <code>yylval.charPtr_</code>.
+	   (See the rule for <code>VARIABLE</code>.)
+	   When string constants are read, <code>STRING</code> should be returned.
+	 </li>
+	 <li>
+	   Return <code>DECLARE</code> if the reserved word &quot;<code>declare</code>&quot; is read.
+	 </li>
+	 <li>
+	   Return <code>PRINTLN</code> if the reserved word &quot;<code>println</code>&quot; is read.
+	 </li>
+	 <li>
+	   Do <code>symTabPtr-&gt;openScope();</code> when a new scope is entered.
+	 </li>
+	 <li>
+	   Do <code>symTabPtr-&gt;closeScope();</code> when a scope is left.
+	 </li>
+       </ol>
+     </li>
+     <p></p>
+
+     <li><h5>Tokenizer C++ Code:</h5>
+       Please replace the tokenizer C/C++ code with the following:
+<pre>
+//  PURPOSE:  To hold the input file from which to read the program (if it is
+//	not &#39;stdin&#39;).
+FILE*		filePtr		= NULL;
+
+//  PURPOSE:  To point to the beginning of the input yet to read (if being
+//	typed from the command line).
+char*		textPtr		= NULL;
+
+//  PURPOSE:  To point to the end of all input (if being typed from the command
+//	line).
+char*		textEndPtr	= NULL;
+
+//  PURPOSE:  To point to a list of all variables that have been declared.
+VarEntry*	varList		= NULL;
+
+//  PURPOSE:  To point to the symbol table (necessary *only* during parsing,
+//	not during execution).
+SymbolTable*	symTabPtr	= NULL;
+
+//  PURPOSE:  To point to the parse tree created by the parser.
+Statement*	resultPtr	= NULL;
+
+
+//  PURPOSE:  To return 1 if the tokenizer should quit after EOF is reached.
+//	Returns 0 otherwise.  No parameters.
+int	yywrap	()
+{
+  return(1);
+}
+
+
+//  PURPOSE:  To show the error message pointed to by &#39;cPtr&#39;.  Returns &#39;0&#39;.
+int	yyerror	(const char *cPtr)
+{
+  printf(&quot;%s, sorry!\n&quot;,cPtr);
+  return(0);
+}
+
+
+//  PURPOSE:  To get up to &#39;maxSize&#39; more characters of input and put them
+//	into &#39;buffer&#39;.   Returns how many characters were obtained.
+int		ourInput	(char*	     buffer,
+				 int	     maxSize
+				)
+{
+  unsigned int	n;
+
+  if  (filePtr == NULL)
+  {
+    n	= MIN(maxSize,textEndPtr - textPtr);
+
+    if  (n &gt; 0)
+    {
+      memcpy(buffer,textPtr,n);
+      textPtr	+= n;
+    }
+  }
+  else
+  {
+    errno	= 0;
+
+    while  ( (n = fread(buffer,1,maxSize,yyin)) == 0 &amp;&amp; ferror(yyin))
+    {
+      if  (errno != EINTR)
+      {
+        fprintf(stderr,&quot;Reading file failed: %s\n&quot;,strerror(errno));
+	exit(EXIT_FAILURE);
+      }
+
+      errno	= 0;
+      clearerr(yyin);
+    }
+
+  }
+
+  return(n);
+}
+
+
+//  PURPOSE:  To parse and execute the program whose filename is given on the
+//	command line at &#39;argv[1]&#39; (if &#39;argc&#39; &gt;= 1), or that the user types in.
+//	Returns &#39;EXIT_SUCCESS&#39; on success or &#39;EXIT_FAILURE&#39; otherwise.
+int	      main		(int		argc,
+	      			 char*		argv[]
+				)
+{
+  //  I.  Application validity check:
+
+  //  II.  Parse and execute program:
+  //  II.A.  Get program source:
+  char	line[LINE_LEN];
+
+  if  ( (argc &gt;= 2)  &amp;&amp;  ( (filePtr = fopen(argv[1],&quot;r&quot;)) != NULL ) )
+  {
+    yyin	= filePtr;
+   }
+  else
+  {
+    printf(&quot;Please enter an expression: &quot;);
+    textPtr	= fgets(line,LINE_LEN,stdin);
+    textEndPtr	= textPtr + strlen(textPtr);
+   }
+
+  //  II.B.  Attempt to parse program:
+  try
+  {
+    symTabPtr	= new SymbolTable;
+    yyparse();
+    delete(symTabPtr);
+  }
+  catch  (std::string*	errStrPtr)
+  {
+    fprintf(stderr,&quot;Error: %s.\n&quot;,errStrPtr-&gt;c_str());
+    delete(errStrPtr);
+  }
+
+  //  II.C.  Execute program (if present):
+  if  (resultPtr != NULL)
+  {
+    double d = resultPtr-&gt;eval();
+    delete(resultPtr);
+  }
+
+  //  II.D. Clean up:
+  //  II.D.1.  Get rid of variables:
+  delete(varList);
+
+  //  II.D.2.  Close file (if open):
+  if  (filePtr != NULL)
+    fclose(filePtr);
+
+  fflush(stdout);
+
+  //  III.  Finished:
+  return(EXIT_SUCCESS);
+}
+</pre>
+     </li>
+     <p></p>
+
+     <li><h5>Grammar rules:</h5>
+       Please make the following changes:
+       <ol type="a">
+	 <li>
+	   For the <code>list -&gt; list state</code> rule: make it <code>add($2)</code> only if <code>$2 != NULL</code>.
+	 </li>
+	 <li>
+	   Make 4 printing statement rules:
+	   <ul>
+	     <li><code>state -&gt; PRINT expr END</code></li>
+	     <li><code>state -&gt; PRINT STRING END</code></li>
+	     <li><code>state -&gt; PRINTLN expr END</code></li>
+	     <li><code>state -&gt; PRINTLN STRING END</code></li>
+	   </ul>
+	   All four should call the <code>PrintStatement</code> constructor with <code>$2</code> as the first parameter.<br/>
+	   The two <code>PRINT</code> rules should pass <code>false</code> as the second parameter (for no newline).<br/>
+	   The two <code>PRINTLN</code> rules should pass <code>true</code> as the second parameter (to add a newline).
+	 </li>
+	 <li>
+	   Please revise these rules:
+	   <ul>
+	     <li><code>state -&gt; READ VARIABLE END</code></li>
+	     <li><code>expr -&gt; VARIABLE EQUAL expr</code></li>
+	     <li><code>expr -&gt; VARIABLE</code></li>
+	   </ul>
+	   so that it does <code>symTabPtr-&gt;retrieve()</code> on the variable names to get a pointer to the corresponding <code>VarEntry</code> instance, and pass that pointer to the appropriate constructor in the action of the rule.
+	   (Method <code>retrieve()</code> takes the variable name as an argument.)
+	   After the variable name has been used, please <code>free()</code> it.
+	 </li>
+	 <li>
+	   Please add a rule <code>state -&gt; DECLARE VARIABLE END</code>.
+	   The code for the rule should:
+	   <ul>
+	     <li>Do <code>symTabPtr-&gt;declare($2,varList);</code> to tell the symbol table about the variable.</li>
+	     <li><code>free()</code> the variable name after declaring it.</li>
+	     <li>Set <code>$$</code> to <code>NULL</code></li>
+	   </ul>
+	 </li>
+       </ol>
+     </li>
+     <p></p>
+
+     <li><h5>Makefile:</h5>
+       <p>
+	 Please use the following make file:
+<pre>
+#--------------------------------------------------------------------------#
+#---									---#
+#---		Makefile						---#
+#---									---#
+#---	    This file defines a Makefile for Lex, Yacc and C files that	---#
+#---	implement a simple interpreted language inspired by C.		---#
+#---									---#
+#---	----	----	----	----	----	----	----	----	---#
+#---									---#
+#---	Version 1.2		2015 May 22		Joseph Phillips	---#
+#---									---#
+#--------------------------------------------------------------------------#
+
+# Makefile for lang2
+lang2	: lang2.tab.o lang2.o
+	  g++ -o $@ lang2.tab.o lang2.o
+
+
+lang2.o	 : lang2.h lang2.c lang2.tab.h SymbolTable.h Statement.h
+	  g++ -c lang2.c -g
+
+
+lang2.tab.o : lang2.h lang2.tab.c lang2.tab.h SymbolTable.h Statement.h
+	  g++ -c lang2.tab.c -g
+
+
+lang2.c	 : lang2.lex
+	  flex -o$@ lang2.lex
+
+
+lang2.tab.c : lang2.y
+	  bison -d lang2.y --debug --verbose
+
+lang2.tab.h : lang2.y
+	  bison -d lang2.y --debug --verbose
+</pre>
+       </p>
+
+     </li><li><h5>Header file:</h5>
+       <p>
+	 Please use the following header file:
+<pre>
+/*-------------------------------------------------------------------------*
+ *---									---*
+ *---		lang2.h							---*
+ *---									---*
+ *---	    This file declares classes and variables that tie the	---*
+ *---	tokenizer with the parser for a simple interpreted language	---*
+ *---	inspired by C.							---*
+ *---									---*
+ *---	----	----	----	----	----	----	----	----	---*
+ *---									---*
+ *---	Version 1.2		2015 May 22		Joseph Phillips	---*
+ *---									---*
+ *-------------------------------------------------------------------------*/
+
+
+//--			Common inclusions:				--//
+
+#include	&lt;stdlib.h&gt;
+#include	&lt;stdio.h&gt;
+#include	&lt;string.h&gt;
+#include	&lt;errno.h&gt;
+#include	&lt;string&gt;
+#include	&quot;SymbolTable.h&quot;
+
+
+//--		Declaration of constants and global vars:		--//
+//  PURPOSE:  To tell the maximum allowed length of C-strings.
+#define	LINE_LEN	256
+
+//  PURPOSE:  To point to a list of all variables that have been declared.
+extern	VarEntry*	varList;
+
+//  PURPOSE:  To point to the symbol table (necessary *only* during parsing,
+//	not during execution).
+extern	SymbolTable*	symTabPtr;
+
+//  PURPOSE:  To point to the parse tree created by the parser.
+#include		&quot;Statement.h&quot;
+extern	Statement*	resultPtr;
+
+//  PURPOSE:  To tell the FILE* object from which &#39;yylex()&#39; should read.
+extern	FILE*		yyin;
+
+//  PURPOSE:  To show the error message pointed to by &#39;cPtr&#39;.  Returns &#39;0&#39;.
+extern	int		yyerror		(const char *cPtr);
+
+//  PURPOSE:  To return the integer that encodes the next read token, or &#39;0&#39;
+//	if there are no more tokens to read.
+extern	int		yylex		();
+
+//  PURPOSE:  To attempt to parse the input.  No parameters.  Returns &#39;0&#39;.
+extern	int		yyparse		();
+
+#define	MIN(x,y)	(((x)&lt;(y)) ? (x) : (y))
+</pre>
+       </p>
+
+     </li><li><h5>SymbolTable:</h5>
+       <p>
+	 Please use the following Symbol Table file:
+<pre>
+/*-------------------------------------------------------------------------*
+ *---									---*
+ *---		SymbolTable.h						---*
+ *---									---*
+ *---	    This file declares (and, well, also defines) classes	---*
+ *---	necessary to define a symbol table for an *interpreted*		---*
+ *---	language inspired from the chapter on compiler symbol tables	---*
+ *---	as described by Charles Fisher, Ron Cytron, Richard LeBlanc Jr.	---*
+ *---	&quot;Crafting a Compiler&quot;, Addison Wesley, 2010.  Specifically, it	---*
+ *---	declares (and, well, also defines) classes:			---*
+ *---		VarEntry						---*
+ *---		SymbolTable						---*
+ *---									---*
+ *---	----	----	----	----	----	----	----	----	---*
+ *---									---*
+ *---	Version 1.0		2015 May 22		Joseph Phillips	---*
+ *---									---*
+ *-------------------------------------------------------------------------*/
+
+#include	&lt;map&gt;
+#include	&lt;vector&gt;
+#include	&lt;string&gt;
+
+
+//  PURPOSE:  To hold data on one particular Variable.
+class		VarEntry
+{
+  //  I.  Member vars:
+  //  PURPOSE:  To hold the name of &#39;*this&#39; VarEntry.
+  std::string			name_;
+
+  //  PURPOSE:  To hold the scope depth of &#39;*this&#39; VarEntry.
+  int				depth_;
+
+  //  PURPOSE:  To hold the address of next VarEntry from a previous depth
+  //  	that shares the same name as &#39;*this&#39;.
+  VarEntry*			prevOfSameNamePtr_;
+
+  //  PURPOSE:  To hold the address of next VarEntry at the same depth as
+  //  	&#39;*this&#39;.
+  VarEntry*			nextOnSameLevelPtr_;
+
+  //  PURPOSE:  To hold the address of next VarEntry, of any level.
+  VarEntry*			nextPtr_;
+
+  //  PURPOSE:  To hold the value for &#39;*this&#39; VarEntry.
+  double			value_;
+
+
+  //  II.  Disallowed auto-generated methods:
+  //  No default constructor:
+  VarEntry			();
+
+  //  No copy constructor:
+  VarEntry			(VarEntry&amp;);
+
+  //  No copy assignment op:
+  VarEntry&amp;	operator=	(VarEntry&amp;);
+
+protected :
+  //  III.  Protected methods:
+
+public :
+  //  IV.  Constructor(s), assignment op(s), factory(s) and destructor:
+  //  PURPOSE:  To create a new &#39;VarEntry&#39; instance with name &#39;newName&#39; and at
+  //	depth &#39;newDepth&#39;.  Also inserts &#39;*this&#39; in the linked list of
+  //	existing VarEntry instances with the same name at lower depths pointed
+  //	to by &#39;newPrevOfSameNamePtr&#39;, in the linked list of VarEntry instances
+  //	at the same depth pointed to by &#39;newNextOnSameLevelPtr&#39;, and in the
+  //	linked list of all VarEntry instances pointed to by &#39;newNextPtr&#39;.
+  VarEntry			(const std::string&amp;	newName,
+				 int   			newDepth,
+				 VarEntry*		newPrevOfSameNamePtr,
+				 VarEntry*		newNextOnSameLevelPtr,
+				 VarEntry*		newNextPtr
+				)
+				throw() :
+				name_(newName),
+				depth_(newDepth),
+				prevOfSameNamePtr_(newPrevOfSameNamePtr),
+				nextOnSameLevelPtr_(newNextOnSameLevelPtr),
+				nextPtr_(newNextPtr),
+				value_(0.0)
+				{ }
+
+  //  PURPOSE:  To release resources.  No parameters.  No return value.
+  ~VarEntry			()
+  				{
+				  delete(nextPtr_);
+				}
+
+  //  V.  Accessors:
+  //  PURPOSE:  To return the name of &#39;*this&#39; VarEntry.  No parameters.
+  const std::string&amp;
+		getName		()
+				const
+				throw()
+				{ return(name_); }
+
+  //  PURPOSE:  To return the scope depth of &#39;*this&#39; VarEntry.  No parameters.
+  int		getDepth	()
+  				const
+				throw()
+				{ return(depth_); }
+
+  //  PURPOSE:  To return the address of the previous VarEntry of a lower
+  //	scope depth with the same name as &#39;*this&#39; VarEntry, or NULL if one
+  //	does not exist.  No parameters.
+  VarEntry*	getPrevOfSameNamePtr
+				()
+				const
+				throw()
+				{ return(prevOfSameNamePtr_); }
+
+  //  PURPOSE:  To return the address of the next VarEntry at the same
+  //	scope depth as &#39;*this&#39; VarEntry.  No parameters.
+  VarEntry*	getNextOnSameLevelPtr
+				()
+				const
+				throw()
+				{ return(nextOnSameLevelPtr_); }
+
+  //  PURPOSE:  To return the value of &#39;*this&#39; VarEntry.  No parameters.
+  double	getValue	()
+  				const
+				throw()
+				{ return(value_); }
+
+  //  VI.  Mutators:
+  //  PURPOSE:  To set the value of &#39;*this&#39; VarEntry to &#39;value&#39;.  No return
+  //	value.
+  void		setValue	(double		value
+  				)
+				throw()
+				{ value_ = value; }
+
+  //  VII.  Methods that do main and misc work of class:
+};
+
+
+//  PURPOSE:  To hold data on the variables as they are parsed.  NOTE:  It
+//	purposefully does not hold the completed list of all created variables.
+//	That is *not* its job.
+class		SymbolTable
+{
+  //  I.  Member vars:
+  //  PURPOSE:  To map from variable names to the address of the VarEntry
+  //	instance at the highest depth that has that name. 
+  std::map&lt;std::string,VarEntry*&gt;
+				nameToEntryMap_;
+
+  //  PURPOSE:  To hold a starting pointer to a linked list (maintained by
+  //	member var &#39;nextOnSameLevelPtr_&#39;) of VarEntry instances at the
+  //	depth indexed by the corresponding std::vector index.
+  std::vector&lt;VarEntry*&gt;	scopeStack_;
+
+  //  PURPOSE:  To keep track of the current scope depth.
+  int				depth_;
+
+  //  II.  Disallowed auto-generated methods:
+  //  No copy constructor:
+  SymbolTable			(const SymbolTable&amp;);
+
+  //  No copy assignment op:
+  SymbolTable&amp;	operator=	(const SymbolTable&amp;);
+
+protected :
+  //  III.  Protected methods:
+
+public :
+  //  IV.  Constructor(s), assignment op(s), factory(s) and destructor:
+  //  PURPOSE:  To initialize &#39;*this&#39; SymbolTable to be empty.  No parameters.
+  //	No return value.
+  SymbolTable			() :
+				depth_(0)
+				{ scopeStack_.push_back(NULL); }
+
+  //  PURPOSE:  To release resources.  No parameters.  No return value.
+  ~SymbolTable			()
+				{ }
+
+  //  V.  Accessors:
+
+  //  VI.  Mutators:
+
+  //  VII.  Methods that do main and misc work of class:
+  //  PURPOSE:  To record that a new scope depth has been entered.  No
+  //	parameters.  No return value.  Throws ptr to &#39;std::string&#39; instance
+  //	that describes an error if an error is detected.
+  void		openScope	()
+				throw(std::string*)
+  {
+    //  I.  Application validity check:
+
+    //  II.  Enter new, deeper, scope:
+    //  II.A.  Update &#39;depth_&#39;:
+    depth_++;
+
+    //  II.B.  Update &#39;scopeStack_&#39; to have a new, blank entry at &#39;depth_&#39;:
+    if  (depth_ &gt;= scopeStack_.size())
+      scopeStack_.push_back(NULL);
+    else
+      scopeStack_[depth_]	= NULL;
+
+    //  III.  Finished:
+  }
+
+  //  PURPOSE:  To record that the compiler has left a scope depth.  No
+  //	parameters.  No return value.  Throws ptr to &#39;std::string&#39; instance
+  //	that describes an error if an error is detected.
+  void		closeScope	()
+				throw(std::string*)
+  {
+    //  I.  Application validity check:
+    if  (depth_ == 0)
+      throw new std::string(&quot;Attempt to close too many scopes&quot;);
+
+    //  II.  Leave scope:
+    //  II.A.  Update &#39;nameToEntryMap_&#39;:
+    //  II.A.1.  Each iteration removes a VarEntry instance at scope depth
+    //		 &#39;depth_&#39; from &#39;nameToEntryMap_&#39;:
+    VarEntry*	run;
+
+    for  (run  = scopeStack_[depth_];
+    	  run != NULL;
+	  run  = run-&gt;getNextOnSameLevelPtr()
+	 )
+      if  (run-&gt;getPrevOfSameNamePtr() == NULL)
+      {
+	//  If there is no prior variable at a lower depth with the same name
+	//  then erase name from &#39;nameToEntryMap_&#39;:
+        nameToEntryMap_.erase(run-&gt;getName());
+      }
+      else
+      {
+	//  If there is a prior variable at a lower depth with the same name
+	//  then replace the name in &#39;nameToEntryMap_&#39; with the prior variable:
+	nameToEntryMap_[run-&gt;getName()]	= run-&gt;getPrevOfSameNamePtr();
+      }
+
+    //  II.B.  Update &#39;scopeStack_[depth_]&#39;:
+    scopeStack_[depth_]	= NULL;
+
+    //  II.C.  Update &#39;depth_&#39;:
+    depth_--;
+
+    //  III.  Finished:
+  }
+
+  //  PURPOSE:  To note that a variable with name &#39;name&#39; has newly been
+  //	declared at the current scope depth.  The new VarEntry instance
+  //	will be put at the head of &#39;varList&#39;.  Throws ptr to &#39;std::string&#39;
+  //	instance that describes an error if an error is detected.
+  void		declare		(const std::string&amp;	name,
+				 VarEntry*&amp;		varList
+  				)
+				throw(std::string*)
+  {
+    //  I.  Application validity check:
+    //  I.A.  Complain if an entry for &#39;name&#39; already exists at the current
+    //	      scope depth:
+    std::map&lt;std::string,VarEntry*&gt;::iterator
+		iter		= nameToEntryMap_.find(name);
+    VarEntry*	prevSameNamePtr	= (iter == nameToEntryMap_.end())
+				  ? NULL
+				  : iter-&gt;second;
+
+    if  ( (prevSameNamePtr		!= NULL	 ) &amp;&amp;
+	  (prevSameNamePtr-&gt;getDepth()	== depth_)
+	)
+      throw new std::string(std::string(&quot;Attempt to redeclare &quot;) + name);
+
+    //  II.  Declare variable:
+    scopeStack_[depth_]		=  //  II.D.  Update &#39;scopeStack_&#39; with
+    nameToEntryMap_[name]	=  //  II.C.  Update &#39;nameToEntryMap_&#39; with
+    varList			=  //  II.B.  Update &#39;varList&#39; with
+				   //  II.A.  the new VarEntry instance
+				    new VarEntry
+					(name,
+					 depth_,
+					 prevSameNamePtr,
+					 scopeStack_[depth_],
+					 varList
+					);
+
+    //  III.  Finished:
+  }
+
+  //  PURPOSE:  To retrieve the address of the VarEntry instance with the
+  //	highest depth scope (innermost scope) with name &#39;name&#39;.  Throws
+  //	ptr to &#39;std::string&#39; instance that describes an error if an error
+  //	is detected.
+  VarEntry*	retrieve	(const std::string&amp;	name
+  				)
+				throw(std::string*)
+  {
+    //  I.  Application validity check:
+    //  I.A.  Ensure there is an existing entry for &#39;name&#39;:
+    std::map&lt;std::string,VarEntry*&gt;::iterator
+		iter		= nameToEntryMap_.find(name);
+
+    if  (iter == nameToEntryMap_.end())
+      throw new std::string(name + std::string(&quot; is undeclared&quot;));
+
+    //  II.  Return value:
+    return(iter-&gt;second);
+  }
+
+};
+</pre>
+       </p>
+     </li>
+     <p></p>
+
+     <li><h5>Statement implementation</h5>
+       <p>
+	 Please use the following <code>Statement.h</code> file:
+<pre>
+/*-------------------------------------------------------------------------*
+ *---									---*
+ *---		Statement.h						---*
+ *---									---*
+ *---	    This file declares (and, well, also defines) classes	---*
+ *---	of a hierarchy necessary to implement the work of an		---*
+ *---	*interpreted* language inspired by C.				---*
+ *---									---*
+ *---	----	----	----	----	----	----	----	----	---*
+ *---									---*
+ *---	Version 1.0		2015 May 22		Joseph Phillips	---*
+ *---									---*
+ *-------------------------------------------------------------------------*/
+
+#include	&quot;vector&quot;
+
+class	Statement
+{
+public :
+  Statement	()	{ }
+
+  virtual
+  ~Statement	()	{ }
+
+  virtual
+  double eval	()	= 0;
+};
+
+
+class	IfStatement : public Statement
+{
+  Statement*	condPtr_;
+  Statement*	thenPtr_;
+  Statement*	elsePtr_;
+public :
+  IfStatement	(Statement*	condPtr,
+		 Statement*	thenPtr,
+		 Statement*	elsePtr	= NULL
+		)
+		{
+		  condPtr_	= condPtr;
+		  thenPtr_	= thenPtr;
+		  elsePtr_	= elsePtr;
+		}
+
+  ~IfStatement	()
+		{
+		  delete(elsePtr_);
+		  delete(thenPtr_);
+		  delete(condPtr_);
+		}
+
+  double eval	()
+		{
+		  return( (condPtr_-&gt;eval() != 0.0)
+			  ? thenPtr_-&gt;eval()
+			  : ( (elsePtr_ == NULL)
+			      ? 0.0
+			      : elsePtr_-&gt;eval()
+			    )
+			);
+		}
+};
+
+
+class WhileStatement : public Statement
+{
+  Statement*	condPtr_;
+  Statement*	blockPtr_;
+public :
+  WhileStatement	(Statement*	condPtr,
+			 Statement*	blockPtr
+			)
+		{
+		  condPtr_	= condPtr;
+		  blockPtr_	= blockPtr;
+		}
+
+  ~WhileStatement	()
+		{
+		  delete(blockPtr_);
+		  delete(condPtr_);
+		}
+
+  double eval	()
+ 		{
+		  double	result	= 0.0;
+
+		  while  (condPtr_-&gt;eval() != 0.0)
+		    result = blockPtr_-&gt;eval();
+
+		  return(result);
+		}
+};
+
+
+class BlockStatement : public Statement
+{
+  std::vector&lt;Statement*&gt;	list_;
+public :
+  BlockStatement	()	{ }
+
+  ~BlockStatement	()
+		{
+		  for  (int i = 0; i &lt; list_.size();  i++)
+		    delete(list_[i]);
+		}
+
+  void	add		(Statement*	statePtr
+			)
+		{
+		  list_.push_back(statePtr);
+		}
+
+  double eval		()
+		{
+		  double	result	= 0.0;
+
+		  for  (int i = 0;  i &lt; list_.size();  i++)
+		    result = list_[i]-&gt;eval();
+
+		  return(result);
+		}
+};
+
+
+class AssignStatement : public Statement
+{
+  VarEntry*	varPtr_;
+  Statement*	exprPtr_;
+public :
+  AssignStatement	(VarEntry*	varPtr,
+			 Statement*	exprPtr
+			)
+		{
+		  varPtr_	= varPtr;
+		  exprPtr_	= exprPtr;
+		}
+
+  ~AssignStatement	()
+		{
+		  delete(exprPtr_);
+		}
+
+  double eval		()
+		{
+		  double	value = exprPtr_-&gt;eval();
+
+		  varPtr_-&gt;setValue(value);
+		  return(value);
+		}
+};
+
+
+class BinaryOpStatement : public Statement
+{
+  Statement*	lhsPtr_;
+  char		op_;
+  Statement*	rhsPtr_;
+public :
+  BinaryOpStatement	(Statement*	lhsPtr,
+			 char		op,
+			 Statement*	rhsPtr
+			)
+		{
+		  lhsPtr_	= lhsPtr;
+		  op_		= op;
+		  rhsPtr_	= rhsPtr;
+		}
+
+  ~BinaryOpStatement	()
+		{
+		  delete(rhsPtr_);
+		  delete(lhsPtr_);
+		}
+
+  double eval		()
+		{
+		  double	result;
+		  double	lhs	= lhsPtr_-&gt;eval();
+		  double	rhs	= rhsPtr_-&gt;eval();
+
+		  switch  (op_)
+		  {
+		  case &#39;+&#39; :	result	= lhs + rhs; break;
+		  case &#39;-&#39; :	result	= lhs - rhs; break;
+		  case &#39;*&#39; :	result	= lhs * rhs; break;
+		  case &#39;/&#39; :	result	= lhs / rhs; break;
+		  case &#39;&lt;&#39; :	result	= (lhs &lt; rhs); break;
+		  case &#39;&amp;&#39; :	result	= (lhs &amp;&amp; rhs); break;
+		  }
+
+		  return(result);
+		}
+};
+
+
+class	ConstantStatement : public Statement
+{
+  double	const_;
+public :
+  ConstantStatement	(double	constant
+  			)
+		{
+		  const_ = constant;
+		}
+
+  double eval		()
+  	 	{
+		  return(const_);
+		}
+};
+
+
+class	RValVarNameStatement : public Statement
+{
+  VarEntry*	varPtr_;
+public :
+  RValVarNameStatement	(VarEntry*	varPtr
+  			)
+		{
+		  varPtr_ = varPtr;
+		}
+
+  ~RValVarNameStatement	()	{ }
+
+  double eval		()
+  	 	{
+		  return(varPtr_-&gt;getValue());
+		}
+};
+
+
+class	PrintStatement : public Statement
+{
+  Statement*		exprPtr_;
+  char*			charPtr_;
+  bool			shouldAddNewline_;
+public :
+  PrintStatement	(Statement*	exprPtr,
+  			 bool		newShouldAddNewline
+  			)
+		{
+		  exprPtr_		= exprPtr;
+		  charPtr_		= NULL;
+		  shouldAddNewline_	= newShouldAddNewline;
+		}
+
+  PrintStatement	(char*	charPtr,
+  			 bool	newShouldAddNewline
+  			)
+		{
+		  exprPtr_		= NULL;
+		  charPtr_		= charPtr;
+		  shouldAddNewline_	= newShouldAddNewline;
+		}
+
+  ~PrintStatement	()
+  		{
+		  delete(exprPtr_);
+		  if  (charPtr_ != NULL)  free(charPtr_);
+		}
+
+  double eval		()
+  	 	{
+		  if  (exprPtr_ == NULL)
+		  {
+		    printf(charPtr_);
+		    if  (shouldAddNewline_)  putchar(&#39;\n&#39;);
+		    return(0.0);
+		  }
+
+		  double	result	= exprPtr_-&gt;eval();
+
+		  printf(&quot;%g&quot;,result);
+		  if  (shouldAddNewline_)  putchar(&#39;\n&#39;);
+		  return(result);
+		}
+};
+
+
+class	ReadStatement : public Statement
+{
+  VarEntry*	varPtr_;
+public :
+  ReadStatement	(VarEntry*	varPtr
+  		)
+		{
+		  varPtr_ = varPtr;
+		}
+
+  ~ReadStatement	()
+  		{ }
+
+  double eval		()
+  	 	{
+		  char		text[256];
+		  double	result;
+
+		  fgets(text,256,stdin);
+		  result	= strtod(text,NULL);
+		  varPtr_-&gt;setValue(result);
+		  return(result);
+		}
+};
+</pre>
+       </p>
+     </li>
+     <p></p>
+   </ol>
+
+   <h4>Test programs:</h4>
+   <p>
+<pre>
+//  &#39;bad0.prog&#39;
+//  This should fail: &quot;Attempt to close too many scopes.&quot;
+
+}
+
+//  &#39;bad1.prog&#39;
+//  This should fail: &quot;Attempt to redeclare d.&quot;
+{
+  declare	d;
+  declare	e;
+  declare	d;
+}
+
+
+//  &#39;bad2.prog&#39;
+//  This should fail: &quot;c is undeclared.&quot;
+{
+  declare a;
+  declare b;
+
+  c = 10;
+}
+
+
+//  &#39;good0.prog&#39;
+//  This program tests scopes:
+{
+  declare	a;
+
+  a		= 10;
+  print	  &quot;Outer a = &quot;;
+  println a;
+
+  {
+    declare	a;
+
+    a		= 20;
+    print   &quot;Inner a = &quot;;
+    println a;
+  }
+
+  print	  &quot;Outer a = &quot;;
+  println a;
+}
+
+
+//  &#39;good1.prog&#39;
+{
+  //  I.  Get first number:
+  declare	first;
+  print &quot;Hello, please enter a number: &quot;;
+  read first;
+
+  //  II.  Get second number:
+  declare	second;
+  second = first - 1;
+
+  while  (second &lt; first)
+  {
+    print &quot;Please enter a number greater than &quot;;
+    print first;
+    print &quot;: &quot;;
+    read second;
+  }
+
+  //  III.  Compute sum from from &#39;
+  declare	run;
+  declare	sum;
+
+  run	= first;
+  sum	= 0;
+
+  while  (run &lt; second)
+  {
+    sum = sum + run;
+    run = run + 1;
+  }
+
+  sum	= sum + run;
+
+  //  IV.  Print sum:
+  print   &quot;The sum from &quot;;
+  print   first;
+  print   &quot; to &quot;;
+  print   second;
+  print   &quot; is &quot;;
+  println sum;
+}
+</pre>
+   </p>
+ 
+
+<script type="text/javascript" src="/d2l/common/math/MathML.js?v=10.3.0.2146-123 "></script><script type="text/javascript">D2LMathML.DesktopInit('/d2l/common/mathjax/2.1/MathJax.js?config=MML_HTMLorMML','/d2l/common/mathjax/2.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML');</script></body></html>

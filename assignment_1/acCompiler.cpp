@@ -119,7 +119,6 @@ struct  Symbol
 Symbol      endSymbol;
 
 
-
 /*---*
  *---*    Helper classes:
  *---*/
@@ -268,6 +267,7 @@ protected :
           return( scanDigits() );
 
         char      ch    = inputCharStream_.peek();
+        
         Symbol*   symbolPtr = (Symbol*)
                     malloc(sizeof(Symbol));
 
@@ -292,6 +292,9 @@ protected :
           break;
 
         case 'i' :
+          // inputCharStream_.advance();
+          // char ch1 = inputCharStream_.peek();
+          // if(ch1=='n') printf("hahahhaha\n"); 
           symbolPtr->symbol_  = INT_DECLARE_SYMBOL;
           break;
 
@@ -712,8 +715,12 @@ Symbol* convert   (Symbol*  symbolPtr,
 {
   if  ( (getType(symbolPtr) == FLOAT_POINT_DC_TYPE) &&
   (desiredType      == INTEGER_DC_TYPE)
-      )
-    throw "Type mismatch";
+      ){
+      snprintf(errorMessage,256,"Type mismatch %u", symbolPtr->symbol_);
+      throw errorMessage;
+      //throw "Type mismatch"
+  }
+    ;
 
   Symbol* toReturn  = symbolPtr;
 

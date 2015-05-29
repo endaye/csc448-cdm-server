@@ -1,0 +1,21 @@
+{
+  i = 5;
+  read divisor;
+  read other;
+
+  if  (divisor < 0 & other < 0)
+  {
+    print -1;
+  }
+  else
+  if (divisor > 0 & other > 0)
+  {
+    print +1;
+  }
+  else
+    divisor = 1;
+
+
+  i = i / divisor;
+  print i;
+}
