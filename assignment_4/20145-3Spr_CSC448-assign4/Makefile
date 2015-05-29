@@ -33,3 +33,9 @@ lang2.tab.c : lang2.y
 
 lang2.tab.h : lang2.y
 	  bison -d lang2.y --debug --verbose
+
+# bison -d lang2.y --debug --verbose
+# g++ -c lang2.tab.c -g
+# flex -olang2.c lang2.lex
+# g++ -c lang2.c -g
+# g++ -o lang2 lang2.tab.o lang2.o
