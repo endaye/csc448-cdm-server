@@ -23,8 +23,8 @@
 
 
 //  PURPOSE:  To hold data on one particular Variable.
-class		VarEntry
-{
+ class		VarEntry
+ {
   //  I.  Member vars:
   //  PURPOSE:  To hold the name of '*this' VarEntry.
   std::string			name_;
@@ -57,10 +57,10 @@ class		VarEntry
   //  No copy assignment op:
   VarEntry&	operator=	(VarEntry&);
 
-protected :
+  protected :
   //  III.  Protected methods:
 
-public :
+  public :
   //  IV.  Constructor(s), assignment op(s), factory(s) and destructor:
   //  PURPOSE:  To create a new 'VarEntry' instance with name 'newName' and at
   //	depth 'newDepth'.  Also inserts '*this' in the linked list of
@@ -69,70 +69,70 @@ public :
   //	at the same depth pointed to by 'newNextOnSameLevelPtr', and in the
   //	linked list of all VarEntry instances pointed to by 'newNextPtr'.
   VarEntry			(const std::string&	newName,
-				 int   			newDepth,
-				 VarEntry*		newPrevOfSameNamePtr,
-				 VarEntry*		newNextOnSameLevelPtr,
-				 VarEntry*		newNextPtr
-				)
-				throw() :
-				name_(newName),
-				depth_(newDepth),
-				prevOfSameNamePtr_(newPrevOfSameNamePtr),
-				nextOnSameLevelPtr_(newNextOnSameLevelPtr),
-				nextPtr_(newNextPtr),
-				value_(0.0)
-				{ }
+   int   			newDepth,
+   VarEntry*		newPrevOfSameNamePtr,
+   VarEntry*		newNextOnSameLevelPtr,
+   VarEntry*		newNextPtr
+   )
+  throw() :
+  name_(newName),
+  depth_(newDepth),
+  prevOfSameNamePtr_(newPrevOfSameNamePtr),
+  nextOnSameLevelPtr_(newNextOnSameLevelPtr),
+  nextPtr_(newNextPtr),
+  value_(0.0)
+  { }
 
   //  PURPOSE:  To release resources.  No parameters.  No return value.
   ~VarEntry			()
-  				{
-				  delete(nextPtr_);
-				}
+  {
+    delete(nextPtr_);
+  }
 
   //  V.  Accessors:
   //  PURPOSE:  To return the name of '*this' VarEntry.  No parameters.
   const std::string&
-		getName		()
-				const
-				throw()
-				{ return(name_); }
+  getName		()
+  const
+  throw()
+  { return(name_); }
 
   //  PURPOSE:  To return the scope depth of '*this' VarEntry.  No parameters.
   int		getDepth	()
-  				const
-				throw()
-				{ return(depth_); }
+  const
+  throw()
+  { return(depth_); }
 
   //  PURPOSE:  To return the address of the previous VarEntry of a lower
   //	scope depth with the same name as '*this' VarEntry, or NULL if one
   //	does not exist.  No parameters.
   VarEntry*	getPrevOfSameNamePtr
-				()
-				const
-				throw()
-				{ return(prevOfSameNamePtr_); }
+  ()
+  const
+  throw()
+  { return(prevOfSameNamePtr_); }
 
   //  PURPOSE:  To return the address of the next VarEntry at the same
   //	scope depth as '*this' VarEntry.  No parameters.
   VarEntry*	getNextOnSameLevelPtr
-				()
-				const
-				throw()
-				{ return(nextOnSameLevelPtr_); }
+  ()
+  const
+  throw()
+  { return(nextOnSameLevelPtr_); }
 
   //  PURPOSE:  To return the value of '*this' VarEntry.  No parameters.
   double	getValue	()
-  				const
-				throw()
-				{ return(value_); }
+  const
+  throw()
+  { return(value_); }
 
   //  VI.  Mutators:
   //  PURPOSE:  To set the value of '*this' VarEntry to 'value'.  No return
   //	value.
   void		setValue	(double		value
-  				)
-				throw()
-				{ value_ = value; }
+    )
+  throw()
+  { value_ = value; }
 
   //  VII.  Methods that do main and misc work of class:
 };
@@ -147,7 +147,7 @@ class		SymbolTable
   //  PURPOSE:  To map from variable names to the address of the VarEntry
   //	instance at the highest depth that has that name. 
   std::map<std::string,VarEntry*>
-				nameToEntryMap_;
+  nameToEntryMap_;
 
   //  PURPOSE:  To hold a starting pointer to a linked list (maintained by
   //	member var 'nextOnSameLevelPtr_') of VarEntry instances at the
@@ -164,20 +164,20 @@ class		SymbolTable
   //  No copy assignment op:
   SymbolTable&	operator=	(const SymbolTable&);
 
-protected :
+  protected :
   //  III.  Protected methods:
 
-public :
+  public :
   //  IV.  Constructor(s), assignment op(s), factory(s) and destructor:
   //  PURPOSE:  To initialize '*this' SymbolTable to be empty.  No parameters.
   //	No return value.
   SymbolTable			() :
-				depth_(0)
-				{ scopeStack_.push_back(NULL); }
+  depth_(0)
+  { scopeStack_.push_back(NULL); }
 
   //  PURPOSE:  To release resources.  No parameters.  No return value.
   ~SymbolTable			()
-				{ }
+  { }
 
   //  V.  Accessors:
 
@@ -188,7 +188,7 @@ public :
   //	parameters.  No return value.  Throws ptr to 'std::string' instance
   //	that describes an error if an error is detected.
   void		openScope	()
-				throw(std::string*)
+  throw(std::string*)
   {
     //  I.  Application validity check:
 
@@ -209,7 +209,7 @@ public :
   //	parameters.  No return value.  Throws ptr to 'std::string' instance
   //	that describes an error if an error is detected.
   void		closeScope	()
-				throw(std::string*)
+  throw(std::string*)
   {
     //  I.  Application validity check:
     if  (depth_ == 0)
@@ -222,9 +222,9 @@ public :
     VarEntry*	run;
 
     for  (run  = scopeStack_[depth_];
-    	  run != NULL;
-	  run  = run->getNextOnSameLevelPtr()
-	 )
+     run != NULL;
+     run  = run->getNextOnSameLevelPtr()
+     )
       if  (run->getPrevOfSameNamePtr() == NULL)
       {
 	//  If there is no prior variable at a lower depth with the same name
@@ -235,39 +235,39 @@ public :
       {
 	//  If there is a prior variable at a lower depth with the same name
 	//  then replace the name in 'nameToEntryMap_' with the prior variable:
-	nameToEntryMap_[run->getName()]	= run->getPrevOfSameNamePtr();
-      }
+       nameToEntryMap_[run->getName()]	= run->getPrevOfSameNamePtr();
+     }
 
     //  II.B.  Update 'scopeStack_[depth_]':
-    scopeStack_[depth_]	= NULL;
+     scopeStack_[depth_]	= NULL;
 
     //  II.C.  Update 'depth_':
-    depth_--;
+     depth_--;
 
     //  III.  Finished:
-  }
+   }
 
   //  PURPOSE:  To note that a variable with name 'name' has newly been
   //	declared at the current scope depth.  The new VarEntry instance
   //	will be put at the head of 'varList'.  Throws ptr to 'std::string'
   //	instance that describes an error if an error is detected.
-  void		declare		(const std::string&	name,
-				 VarEntry*&		varList
-  				)
-				throw(std::string*)
-  {
+   void		declare		(const std::string&	name,
+     VarEntry*&		varList
+     )
+   throw(std::string*)
+   {
     //  I.  Application validity check:
     //  I.A.  Complain if an entry for 'name' already exists at the current
     //	      scope depth:
     std::map<std::string,VarEntry*>::iterator
-		iter		= nameToEntryMap_.find(name);
+    iter		= nameToEntryMap_.find(name);
     VarEntry*	prevSameNamePtr	= (iter == nameToEntryMap_.end())
-				  ? NULL
-				  : iter->second;
+    ? NULL
+    : iter->second;
 
     if  ( (prevSameNamePtr		!= NULL	 ) &&
-	  (prevSameNamePtr->getDepth()	== depth_)
-	)
+     (prevSameNamePtr->getDepth()	== depth_)
+     )
       throw new std::string(std::string("Attempt to redeclare ") + name);
 
     //  II.  Declare variable:
@@ -275,13 +275,13 @@ public :
     nameToEntryMap_[name]	=  //  II.C.  Update 'nameToEntryMap_' with
     varList			=  //  II.B.  Update 'varList' with
 				   //  II.A.  the new VarEntry instance
-				    new VarEntry
-					(name,
-					 depth_,
-					 prevSameNamePtr,
-					 scopeStack_[depth_],
-					 varList
-					);
+    new VarEntry
+    (name,
+      depth_,
+      prevSameNamePtr,
+      scopeStack_[depth_],
+      varList
+      );
 
     //  III.  Finished:
   }
@@ -291,13 +291,13 @@ public :
   //	ptr to 'std::string' instance that describes an error if an error
   //	is detected.
   VarEntry*	retrieve	(const std::string&	name
-  				)
-				throw(std::string*)
+    )
+  throw(std::string*)
   {
     //  I.  Application validity check:
     //  I.A.  Ensure there is an existing entry for 'name':
     std::map<std::string,VarEntry*>::iterator
-		iter		= nameToEntryMap_.find(name);
+    iter		= nameToEntryMap_.find(name);
 
     if  (iter == nameToEntryMap_.end())
       throw new std::string(name + std::string(" is undeclared"));
