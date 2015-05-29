@@ -1,8 +1,8 @@
 %{
-//  lang0.y
-//  $ bison --verbose -d --debug lang0.y
-//  $ gcc lang0.tab.c -c
-#include  "lang0.h"
+//  lang2.y
+//  $ bison --verbose -d --debug lang2.y
+//  $ gcc lang2.tab.c -c
+#include  "lang2.h"
 %}
 
 %union

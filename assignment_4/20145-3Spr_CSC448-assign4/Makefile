@@ -1,34 +1,35 @@
-# Makefile for lang0
-lang0	: lang0.tab.o lang0.o
-	  g++ -o $@ lang0.tab.o lang0.o
+#--------------------------------------------------------------------------#
+#---									---#
+#---		Makefile						---#
+#---									---#
+#---	    This file defines a Makefile for Lex, Yacc and C files that	---#
+#---	implement a simple interpreted language inspired by C.		---#
+#---									---#
+#---	----	----	----	----	----	----	----	----	---#
+#---									---#
+#---	Version 1.2		2015 May 22		Joseph Phillips	---#
+#---									---#
+#--------------------------------------------------------------------------#
 
-lang1	: lang1.tab.o lang0.o
-	  g++ -o $@ lang1.tab.o lang0.o
-
-
-lang0.o	 : lang0.h lang0.c lang0.tab.h VarStore.h Statement.h
-	  g++ -c lang0.c -g
-
-
-lang0.tab.o : lang0.h lang0.tab.c lang0.tab.h VarStore.h Statement.h
-	  g++ -c lang0.tab.c -g
-
-lang1.tab.o : lang0.h lang1.tab.c lang1.tab.h VarStore.h Statement.h
-	  g++ -c lang1.tab.c -g
-
-
-lang0.c	 : lang0.lex
-	  flex -o$@ lang0.lex
+# Makefile for lang2
+lang2	: lang2.tab.o lang2.o
+	  g++ -o $@ lang2.tab.o lang2.o
 
 
-lang0.tab.c : lang0.y
-	  bison -d lang0.y --debug --verbose
+lang2.o	 : lang2.h lang2.c lang2.tab.h SymbolTable.h Statement.h
+	  g++ -c lang2.c -g
 
-lang0.tab.h : lang0.y
-	  bison -d lang0.y --debug --verbose
 
-lang1.tab.c : lang1.y
-	  bison -d lang1.y --debug --verbose
+lang2.tab.o : lang2.h lang2.tab.c lang2.tab.h SymbolTable.h Statement.h
+	  g++ -c lang2.tab.c -g
 
-lang1.tab.h : lang1.y
-	  bison -d lang1.y --debug --verbose
+
+lang2.c	 : lang2.lex
+	  flex -o$@ lang2.lex
+
+
+lang2.tab.c : lang2.y
+	  bison -d lang2.y --debug --verbose
+
+lang2.tab.h : lang2.y
+	  bison -d lang2.y --debug --verbose

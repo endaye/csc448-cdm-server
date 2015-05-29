@@ -1,11 +1,11 @@
 %{
-//  lang0.lex
-//  unix> flex -o lang0.c lang0.lex
-//  unix> gcc lang0.c -c
-//  unix> gcc -o lang0 lang0.tab.o lang0.o
+//  lang2.lex
+//  unix> flex -o lang2.c lang2.lex
+//  unix> gcc lang2.c -c
+//  unix> gcc -o lang2 lang2.tab.o lang2.o
 
-#include	"lang0.h"
-#include	"lang0.tab.h"
+#include	"lang2.h"
+#include	"lang2.tab.h"
 
 #undef		YY_INPUT
 #define		YY_INPUT(buffer,result,maxSize)		\
